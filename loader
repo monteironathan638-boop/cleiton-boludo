@@ -6,11 +6,11 @@
 local BASE_URL = "https://raw.githubusercontent.com/monteironathan638-boop/cleiton-boludo/main/cleiton_boludo_base.lua"
 
 -- Exemplo de módulo (Substitua o ID e o link quando criar um módulo real)
-local Counter blox = "https://raw.githubusercontent.com/monteironathan638-boop/cleiton-boludo/main/Counterblox.lua"
+local Counterblox = "https://raw.githubusercontent.com/monteironathan638-boop/cleiton-boludo/main/Counterblox.lua"
 
 -- GameId -> módulo
 local Modules = {
-    [301549746] = { name = "Counter blox", url = Counter blox },
+    [301549746] = { name = "Counter blox", url = Counterblox },
 }
 
 -- ═══════════════════════════════════════════════════════════════════════
