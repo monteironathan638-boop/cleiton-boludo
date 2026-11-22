@@ -1,7 +1,7 @@
 -- ╔══════════════════════════════════════════════════════════════════════╗
--- ║  CLEITON BOLUDO HUB - BASE v7.0                                    ║
+-- ║  CLEITON BOLUDO HUB - BASE v7.1 (completa)                         ║
 -- ║  UI Black & White (glass + gradientes + glow)                      ║
--- ║  Widgets estáveis, Infinite Jump, Noclip, Fly, ESP Detalhado       ║
+-- ║  Widgets estáveis, Infinite Jump, Anti-AFK, Home/Player            ║
 -- ╚══════════════════════════════════════════════════════════════════════╝
 
 local Players            = game:GetService("Players")
@@ -27,7 +27,7 @@ local Colors = {
     Accent      = Color3.fromRGB(255, 255, 255),
     AccentLight = Color3.fromRGB(220, 220, 220),
     AccentDark  = Color3.fromRGB(150, 150, 150),
-    Purple      = Color3.fromRGB(200, 200, 200), -- Substituído por cinza claro para manter o tema
+    Purple      = Color3.fromRGB(200, 200, 200),
     Success     = Color3.fromRGB(255, 255, 255),
     Warning     = Color3.fromRGB(180, 180, 180),
     Danger      = Color3.fromRGB(120, 120, 120),
@@ -85,7 +85,7 @@ do
 end
 
 local Z = {
-    Version = "7.0", Alive = true, Ready = false,
+    Version = "7.1", Alive = true, Ready = false,
     Colors = Colors, SavedStates = {}, UI = {}, Connections = {},
     Tabs = {}, TabOrder = {}, CurrentTab = nil,
     ModuleName = "Nenhum", PageGen = 0, IsVisible = false,
@@ -1076,6 +1076,7 @@ end
 function Z.ToggleVisible() Z.SetVisible(not Z.IsVisible) end
 MakeDraggable(Bubble, Bubble, function() Z.SetVisible(true) end)
 
+-- Botões do cabeçalho
 local function HeaderBtn(text, xOff, cb)
     local b = New("TextButton", {
         Size = UDim2.fromOffset(34, 34), Position = UDim2.new(1, xOff, 0, 15), BackgroundColor3 = Colors.Card, Text = text,
@@ -1086,4 +1087,4 @@ local function HeaderBtn(text, xOff, cb)
     local st = Stroke(b, Colors.Border, 1, 0.5)
     b.MouseEnter:Connect(function()
         Tween(b, 0.15, { BackgroundColor3 = Colors.CardHover })
-        ... (25 KB restante(s))
+        Tween(st, 0.15, { Color =... (13 KB restante(s))
