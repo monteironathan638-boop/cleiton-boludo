@@ -1,5 +1,5 @@
-if not _G.ZuniHub or not _G.ZuniHub.Ready then return end
-local Z = _G.ZuniHub
+if not _G.CleitonBoludoHub or not _G.CleitonBoludoHub.Ready then return end
+local Z = _G.CleitonBoludoHub
 if Z.MeuModuloLoaded then return end
 Z.MeuModuloLoaded = true
 Z.ModuleName = "Counter Blox"
@@ -84,6 +84,7 @@ local function destroyESP(plr)
     if espObjects[plr] then
         for _, obj in pairs(espObjects[plr]) do
             if obj and obj.Destroy then pcall(obj.Destroy, obj) end
+            if obj and obj.Remove then pcall(obj.Remove, obj) end
         end
         espObjects[plr] = nil
     end
@@ -103,7 +104,7 @@ local function createWallhack(plr)
     local char = plr.Character
     if not char then return end
     local hl = Instance.new("Highlight")
-    hl.Name = "ZuniWH"
+    hl.Name = "CleitonWH"
     hl.Adornee = char
     hl.FillColor = C.Danger
     hl.OutlineColor = C.Text
@@ -140,7 +141,7 @@ local function createESP(plr)
     -- Name + Health + Weapon Billboard
     if S.cb_esp_name or S.cb_esp_health or S.cb_esp_weapon then
         local bg = Instance.new("BillboardGui")
-        bg.Name = "ZuniESP"
+        bg.Name = "CleitonESP"
         bg.Size = UDim2.new(0, 180, 0, 52)
         bg.StudsOffset = Vector3.new(0, 2.8, 0)
         bg.AlwaysOnTop = true
@@ -338,20 +339,21 @@ local function getClosestToCursor()
     local bestDist = S.cb_aimbot_fov
 
     for _, plr in ipairs(Players:GetPlayers()) do
-        if plr == Player then continue end
-        if not isAlive(plr) or isTeammate(plr) then continue end
-        local char = plr.Character
-        local head = char and char:FindFirstChild("Head")
-        if not head then continue end
-        local dist = getDistance(plr)
-        if dist > S.cb_aimbot_max_dist then continue end
-
-        local screen, onScreen = worldToScreen(head.Position)
-        if onScreen then
-            local d = (mouse - screen).Magnitude
-            if d < bestDist then
-                bestDist = d
-                best = plr
+        if plr ~= Player and isAlive(plr) and not isTeammate(plr) then
+            local char = plr.Character
+            local head = char and char:FindFirstChild("Head")
+            if head then
+                local dist = getDistance(plr)
+                if dist <= S.cb_aimbot_max_dist then
+                    local screen, onScreen = worldToScreen(head.Position)
+                    if onScreen then
+                        local d = (mouse - screen).Magnitude
+                        if d < bestDist then
+                            bestDist = d
+                            best = plr
+                        end
+                    end
+                end
             end
         end
     end
@@ -375,9 +377,9 @@ local function doAimbot()
 end
 
 -- ============================================================
--- LOOPS
+-- LOOPS (CORRIGIDOS - O 1º ARGUMENTO AGORA É O TEMPO)
 -- ============================================================
-Z.PageLoop("cb_esp_loop", function()
+Z.PageLoop(0.01, function()
     if not Z.Alive then return end
     for plr, _ in pairs(espObjects) do
         updateESP(plr)
@@ -399,7 +401,7 @@ Z.PageLoop("cb_esp_loop", function()
     end
 end)
 
-Z.PageLoop("cb_wh_loop", function()
+Z.PageLoop(0.05, function()
     if not Z.Alive then return end
     if S.cb_wallhack_enabled then
         for _, plr in ipairs(Players:GetPlayers()) do
@@ -414,7 +416,7 @@ Z.PageLoop("cb_wh_loop", function()
     end
 end)
 
-Z.PageLoop("cb_aim_loop", function()
+Z.PageLoop(0.01, function()
     if not Z.Alive then return end
     doAimbot()
 end)
@@ -496,4 +498,4 @@ end
 
 Z.AddTab("Counter Blox", "crosshair", LoadMain)
 Z.SelectTab("Counter Blox")
-Z.Notify("Counter Blox", "Modulo carregado. ESP detalhado + Aimbot na cabeca prontos.", 4)
+Z.Notify("Counter Blox", "Modulo carregado. ESP detalhado + Aimbot na cabeca prontos.", Z.Colors.Success, 4)
