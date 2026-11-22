@@ -1,0 +1,131 @@
+-- ╔══════════════════════════════════════════════════════════════════════╗
+-- ║  CLEITON BOLUDO HUB - LOADER v1.1                                  ║
+-- ║  Limpa, baixa a base e carrega os módulos.                         ║
+-- ╚══════════════════════════════════════════════════════════════════════╝
+
+local BASE_URL = "https://raw.githubusercontent.com/monteironathan638-boop/cleiton-boludo/main/cleiton_boludo_base.lua"
+
+-- Exemplo de módulo (Substitua o ID e o link quando criar um módulo real)
+local Counter blox = "https://raw.githubusercontent.com/monteironathan638-boop/cleiton-boludo/main/Counterblox.lua"
+
+-- GameId -> módulo
+local Modules = {
+    [301549746] = { name = "Counter blox", url = Counter blox },
+}
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- LIMPEZA
+-- ═══════════════════════════════════════════════════════════════════════
+local function Cleanup()
+    if _G.CleitonBoludoHub then
+        pcall(function()
+            if _G.CleitonBoludoHub.Destroy then _G.CleitonBoludoHub.Destroy() else _G.CleitonBoludoHub.Alive = false end
+        end)
+        _G.CleitonBoludoHub = nil
+    end
+    if _G.ZuniHub then
+        pcall(function()
+            if _G.ZuniHub.Destroy then _G.ZuniHub.Destroy() else _G.ZuniHub.Alive = false end
+        end)
+        _G.ZuniHub = nil
+    end
+
+    local roots = {}
+    pcall(function() table.insert(roots, game.Players.LocalPlayer:WaitForChild("PlayerGui")) end)
+    pcall(function() table.insert(roots, game:GetService("CoreGui")) end)
+    pcall(function() if gethui then table.insert(roots, gethui()) end end)
+
+    for _, root in ipairs(roots) do
+        pcall(function()
+            for _, name in ipairs({ "CleitonBoludo", "CleitonNotify", "CleitonESP", "ZuniHub", "ZuniNotify" }) do
+                local g = root:FindFirstChild(name)
+                if g then g:Destroy() end
+            end
+        end)
+    end
+end
+Cleanup()
+task.wait(0.2)
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- DOWNLOAD + EXECUÇÃO SEGUROS
+-- ═══════════════════════════════════════════════════════════════════════
+local function Fetch(url)
+    local full = url .. "?t=" .. os.time()
+    local ok, res = pcall(function() return game:HttpGet(full) end)
+    if ok and type(res) == "string" and #res > 10 then return res end
+
+    local req = (syn and syn.request) or http_request or request or (http and http.request)
+    if req then
+        local ok2, r = pcall(req, { Url = full, Method = "GET" })
+        if ok2 and r and (r.StatusCode == 200 or r.Success) and type(r.Body) == "string" and #r.Body > 10 then
+            return r.Body
+        end
+    end
+    return nil, tostring(res)
+end
+
+local function SafeLoad(url, label)
+    print("[Loader] Baixando: " .. label)
+    local src, lastErr
+    for attempt = 1, 3 do
+        src, lastErr = Fetch(url)
+        if src then break end
+        warn(("[Loader] Tentativa %d/3 falhou (%s): %s"):format(attempt, label, tostring(lastErr)))
+        task.wait(0.6)
+    end
+    if not src then return false, "download falhou" end
+
+    local fn, err = loadstring(src, "=CleitonBoludo_" .. label)
+    if not fn then
+        warn("[Loader] Erro de sintaxe em " .. label .. ": " .. tostring(err))
+        return false, tostring(err)
+    end
+    local ok, err2 = pcall(fn)
+    if not ok then
+        warn("[Loader] Erro ao executar " .. label .. ": " .. tostring(err2))
+        return false, tostring(err2)
+    end
+    return true
+end
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- CARREGAR A BASE
+-- ═══════════════════════════════════════════════════════════════════════
+print("⚡ CLEITON BOLUDO HUB - LOADER")
+
+if not SafeLoad(BASE_URL, "Base") then
+    warn("[Loader] Abortando: não foi possível carregar a base.")
+    return
+end
+
+local waited = 0
+while not (_G.CleitonBoludoHub and _G.CleitonBoludoHub.Ready) and waited < 100 do
+    task.wait(0.1)
+    waited += 1
+end
+
+local Z = _G.CleitonBoludoHub
+
+if not (Z and Z.Ready) then
+    warn("[Loader] A base não ficou pronta em 10s.")
+    return
+end
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- MÓDULO DO JOGO
+-- ═══════════════════════════════════════════════════════════════════════
+local id = game.GameId
+print("[Loader] GameId:", id, "| PlaceId:", game.PlaceId)
+
+local mod = Modules[id]
+if mod then
+    local ok, err = SafeLoad(mod.url, mod.name)
+    if not ok then
+        Z.Notify("Erro no módulo " .. mod.name, tostring(err):sub(1, 90), Z.Colors.Danger, 6)
+    end
+else
+    Z.Notify("Jogo não suportado", "GameId " .. tostring(id) .. ". Apenas Home e Player disponíveis.", Z.Colors.Warning, 5)
+end
+
+print("[Loader] ✓ Concluído.")
