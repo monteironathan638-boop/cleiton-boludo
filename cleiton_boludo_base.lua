@@ -1087,4 +1087,260 @@ local function HeaderBtn(text, xOff, cb)
     local st = Stroke(b, Colors.Border, 1, 0.5)
     b.MouseEnter:Connect(function()
         Tween(b, 0.15, { BackgroundColor3 = Colors.CardHover })
-        Tween(st, 0.15, { Color =... (13 KB restante(s))
+        Tween(st, 0.15, { Color = Colors.Accent, Transparency = 0.2 })
+    end)
+    b.MouseLeave:Connect(function()
+        Tween(b, 0.15, { BackgroundColor3 = Colors.Card })
+        Tween(st, 0.15, { Color = Colors.Border, Transparency = 0.5 })
+    end)
+    b.MouseButton1Click:Connect(function() Safe(cb) end)
+    return b
+end
+HeaderBtn("–", -90, function() Z.SetVisible(false) end)
+HeaderBtn("×", -50, function() Z.Destroy() end)
+
+-- Atalhos de teclado
+Z.Track(UIS.InputBegan:Connect(function(input, gpe)
+    if gpe or not Z.Alive then return end
+    if input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.RightControl then
+        Z.ToggleVisible()
+    end
+end))
+Z.Track(RunService.Heartbeat:Connect(function(dt)
+    if dt > 0 then Z.FPS = Z.FPS * 0.92 + (1 / dt) * 0.08 end
+end))
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- ABAS
+-- ═══════════════════════════════════════════════════════════════════════
+local function StyleTab(tab, active)
+    Tween(tab.Button, 0.2, { BackgroundTransparency = active and 0.1 or 1, BackgroundColor3 = active and Colors.AccentDark or Colors.Card })
+    Tween(tab.Stroke, 0.2, { Transparency = active and 0.15 or 1 })
+    Tween(tab.Bar, 0.2, { BackgroundTransparency = active and 0 or 1 })
+    Tween(tab.Icon, 0.2, { TextColor3 = active and Colors.Text or Colors.TextDim })
+    Tween(tab.Label, 0.2, { TextColor3 = active and Colors.Text or Colors.TextDim })
+end
+
+function Z.AddTab(name, icon, callback)
+    local existing = Z.Tabs[name]
+    if existing then existing.Callback = callback return existing end
+
+    local iconRich = ResolveIcon(icon, name)
+    local cleanName = NoEmoji(name)
+
+    local btn = New("TextButton", {
+        Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = Colors.Card, BackgroundTransparency = 1, BorderSizePixel = 0,
+        AutoButtonColor = false, Text = "", LayoutOrder = #Z.TabOrder + 1,
+    }, TabsScroll)
+    Corner(btn, 12)
+    Gradient(btn, WHITE, Color3.fromRGB(176, 184, 232), 0)
+    local tabStroke = Stroke(btn, Colors.AccentLight, 1.2, 1)
+    local bar = New("Frame", {
+        Size = UDim2.fromOffset(4, 22), Position = UDim2.new(0, 0, 0.5, -11), BackgroundColor3 = WHITE,
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+    }, btn)
+    Corner(bar, 2)
+    Gradient(bar, Colors.AccentLight, Colors.Purple, 90)
+    local ic = Label(btn, iconRich, 18, Colors.TextDim, F_REG, UDim2.fromOffset(14, 0), UDim2.fromOffset(30, 44), Enum.TextXAlignment.Center)
+    ic.RichText = true
+    local nm = Label(btn, cleanName, 14, Colors.TextDim, F_BOLD, UDim2.fromOffset(52, 0), UDim2.new(1, -58, 1, 0))
+
+    local tab = { Name = name, Icon = ic, Label = nm, Button = btn, Bar = bar, Stroke = tabStroke, Callback = callback, IconText = iconRich, DisplayName = cleanName }
+    Z.Tabs[name] = tab
+    table.insert(Z.TabOrder, name)
+
+    btn.MouseEnter:Connect(function()
+        if Z.CurrentTab ~= name then
+            Tween(btn, 0.15, { BackgroundTransparency = 0.55 })
+            Tween(tabStroke, 0.15, { Transparency = 0.75 })
+        end
+    end)
+    btn.MouseLeave:Connect(function()
+        if Z.CurrentTab ~= name then
+            Tween(btn, 0.15, { BackgroundTransparency = 1 })
+            Tween(tabStroke, 0.15, { Transparency = 1 })
+        end
+    end)
+    btn.MouseButton1Click:Connect(function() Z.SelectTab(name) end)
+    return tab
+end
+
+function Z.SelectTab(name)
+    local tab = Z.Tabs[name]
+    if not tab then return end
+    local old = Z.Tabs[Z.CurrentTab]
+    if old and old ~= tab then StyleTab(old, false) end
+    Z.CurrentTab = name
+    StyleTab(tab, true)
+    TabTitle.Text = tab.IconText .. "  " .. tab.DisplayName
+
+    Z.GUI.Clear()
+    if tab.Callback then
+        local ok, err = xpcall(tab.Callback, function(e)
+            warn("[Cleiton] Erro na aba '" .. name .. "': " .. tostring(e) .. "\n" .. debug.traceback())
+            return tostring(e)
+        end)
+        if not ok then
+            Z.Info("Erro ao carregar esta aba:")
+            Z.Info(tostring(err))
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- ENCERRAR
+-- ═══════════════════════════════════════════════════════════════════════
+function Z.Destroy()
+    if not Z.Alive then return end
+    Z.Alive = false
+    pcall(function()
+        local c = Player.Character
+        local hum = c and c:FindFirstChildOfClass("Humanoid")
+        if hum then
+            if S.speedOn then hum.WalkSpeed = 16 end
+            if S.jumpOn then hum.JumpPower = 50 end
+        end
+    end)
+    Z.DisconnectAll()
+    for _, c in ipairs(PageConns) do pcall(function() c:Disconnect() end) end
+    pcall(function() Hub:Destroy() end)
+    pcall(function() NotifyGui:Destroy() end)
+    if _G.CleitonBoludoHub == Z then _G.CleitonBoludoHub = nil end
+end
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- FUNÇÕES DO PLAYER
+-- ═══════════════════════════════════════════════════════════════════════
+local function Def(k, v) if S[k] == nil then S[k] = v end end
+Def("speedOn", false) Def("walkSpeed", 16)
+Def("jumpOn", false)  Def("jumpPower", 50)
+Def("infJump", false) Def("antiAfk", true)
+
+local function GetHum()
+    local c = Player.Character
+    return c and c:FindFirstChildOfClass("Humanoid")
+end
+
+Z.Track(RunService.Heartbeat:Connect(function()
+    local hum = GetHum()
+    if not hum then return end
+    if S.speedOn and hum.WalkSpeed ~= S.walkSpeed then hum.WalkSpeed = S.walkSpeed end
+    if S.jumpOn then
+        if not hum.UseJumpPower then hum.UseJumpPower = true end
+        if hum.JumpPower ~= S.jumpPower then hum.JumpPower = S.jumpPower end
+    end
+end))
+Z.Track(UIS.JumpRequest:Connect(function()
+    if not S.infJump then return end
+    local hum = GetHum()
+    if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+end))
+Z.Track(Player.Idled:Connect(function()
+    if not S.antiAfk then return end
+    pcall(function()
+        local vu = game:GetService("VirtualUser")
+        vu:CaptureController()
+        vu:ClickButton2(Vector2.new())
+    end)
+end))
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- ABA HOME
+-- ═══════════════════════════════════════════════════════════════════════
+local function FmtTime(sec)
+    sec = math.floor(sec)
+    return string.format("%02d:%02d:%02d", sec // 3600, (sec % 3600) // 60, sec % 60)
+end
+
+local function LoadHome()
+    local hero = Card(102)
+    local stripe = New("Frame", {
+        Size = UDim2.new(0, 4, 1, -28), Position = UDim2.fromOffset(12, 14), BackgroundColor3 = WHITE, BorderSizePixel = 0,
+    }, hero)
+    Corner(stripe, 2)
+    Gradient(stripe, Colors.Accent, Colors.Purple, 90)
+    Label(hero, "Bem-vindo, " .. Player.DisplayName, 20, Colors.Text, F_BLACK, UDim2.fromOffset(28, 14), UDim2.new(1, -44, 0, 28))
+    New("TextLabel", {
+        BackgroundTransparency = 1, Font = F_REG, TextSize = 12, TextColor3 = Colors.TextDim, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, LineHeight = 1.3,
+        Text = "Escolha uma aba ao lado para começar. Minimize com – para virar uma bolha arrastável.",
+        Position = UDim2.fromOffset(28, 46), Size = UDim2.new(1, -44, 0, 44),
+    }, hero)
+
+    Z.Sep("INFORMAÇÕES")
+    Z.Stat("Jogador", Player.Name)
+    local stGame = Z.Stat("Jogo", tostring(game.PlaceId))
+    Z.Stat("Módulo carregado", Z.ModuleName)
+    local stFps  = Z.Stat("FPS", "—")
+    local stPing = Z.Stat("Ping", "—")
+    local stTime = Z.Stat("Tempo de uso", "00:00:00")
+
+    task.spawn(function()
+        local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
+        if ok and info and info.Name then stGame.Set(info.Name) end
+    end)
+    Z.PageLoop(0.5, function()
+        local fps = math.floor(Z.FPS + 0.5)
+        stFps.Set(fps, fps >= 50 and Colors.Success or (fps >= 30 and Colors.Warning or Colors.Danger))
+        local okp, ping = pcall(function() return Player:GetNetworkPing() * 1000 end)
+        if okp then
+            ping = math.floor(ping)
+            stPing.Set(ping .. " ms", ping <= 100 and Colors.Success or (ping <= 200 and Colors.Warning or Colors.Danger))
+        end
+        stTime.Set(FmtTime(tick() - Z.StartTime))
+    end)
+
+    Z.Sep("ATALHOS")
+    Z.Info("INSERT ou RIGHT CTRL: mostrar / esconder o hub.\nArraste o topo da janela para mover. Use – para minimizar.")
+end
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- ABA PLAYER
+-- ═══════════════════════════════════════════════════════════════════════
+local function LoadPlayer()
+    Z.Sep("MOVIMENTO")
+    Z.Toggle("Velocidade personalizada", S.speedOn, function(v)
+        S.speedOn = v
+        if not v then local h = GetHum() if h then h.WalkSpeed = 16 end end
+    end, "Aplica o valor do controle abaixo")
+    Z.Slider("Velocidade (WalkSpeed)", 16, 250, S.walkSpeed, function(v) S.walkSpeed = v end)
+
+    Z.Toggle("Pulo personalizado", S.jumpOn, function(v)
+        S.jumpOn = v
+        if not v then local h = GetHum() if h then h.JumpPower = 50 end end
+    end, "Aplica o valor do controle abaixo")
+    Z.Slider("Força do pulo (JumpPower)", 50, 300, S.jumpPower, function(v) S.jumpPower = v end)
+
+    Z.Toggle("Pulo infinito", S.infJump, function(v) S.infJump = v end, "Pule no ar quantas vezes quiser")
+
+    Z.Sep("UTILIDADES")
+    Z.Toggle("Anti-AFK", S.antiAfk, function(v) S.antiAfk = v end, "Evita ser kickado por ficar parado")
+
+    Z.Sep("AÇÕES")
+    Z.Button("Resetar valores de movimento", Colors.AccentDark, function()
+        S.speedOn, S.jumpOn, S.infJump = false, false, false
+        S.walkSpeed, S.jumpPower = 16, 50
+        local h = GetHum()
+        if h then h.WalkSpeed, h.JumpPower = 16, 50 end
+        Z.Notify("Player", "Valores resetados.", Colors.Success, 2)
+        Z.SelectTab("Player")
+    end)
+    Z.Button("Resetar personagem", Colors.Warning, function()
+        local h = GetHum()
+        if h then h.Health = 0 end
+    end)
+    Z.Button("Rejoin (reentrar no servidor)", Colors.Danger, function()
+        Z.Notify("Rejoin", "Reconectando...", Colors.Warning, 3)
+        pcall(function() TeleportService:Teleport(game.PlaceId, Player) end)
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- INICIAR
+-- ═══════════════════════════════════════════════════════════════════════
+Z.AddTab("Home", "house", LoadHome)
+Z.AddTab("Player", "person", LoadPlayer)
+Z.SelectTab("Home")
+Z.SetVisible(true)
+Z.Ready = true
+print("Cleiton Boludo Hub Base v" .. Z.Version .. " carregada.")
